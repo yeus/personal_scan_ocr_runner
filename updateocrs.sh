@@ -28,7 +28,10 @@
 #     echo "${fn}"
 # done
 
-find . -type f -name '*.jpg' | while read path
+#search for multiple fil extensions:
+#find . -type f \( -name "*.shtml" -or -name "*.css" \)
+
+find . -type f -name '*.pdf' -not -path "*/ocrd/*" | while read path
 do
     fn=$(basename -- "$path")
     dn=$(dirname "${path}")
@@ -37,5 +40,27 @@ do
     NEWDIR="./ocrd/${dn}/"
     OUT="${NEWDIR}/${FN}.pdf"
     mkdir -p "${NEWDIR}"
-    img2pdf --pagesize A4 "${path}" | ocrmypdf --clean-final --deskew -l eng+deu - "${OUT}"
+    if [ ! -f "${OUT}" ]; then
+        echo "File not found!"
+        ocrmypdf --clean-final --deskew -l eng+deu "${path}" "${OUT}"
+    else
+        echo "File exists already!"
+    fi
+done
+
+find . -type f -name '*.jpg' -not -path "*/ocrd/*" | while read path
+do
+    fn=$(basename -- "$path")
+    dn=$(dirname "${path}")
+    FN=${fn%%.*}
+    #OUT="./ocrd/${dn}/${FN}.pdf"
+    NEWDIR="./ocrd/${dn}/"
+    OUT="${NEWDIR}/${FN}.pdf"
+    mkdir -p "${NEWDIR}"
+    if [ ! -f "${OUT}" ]; then
+        echo "File not found!"
+        img2pdf --pagesize A4 "${path}" | ocrmypdf --clean-final --deskew -l eng+deu - "${OUT}"
+    else
+        echo "File exists already!"
+    fi
 done
