@@ -16,4 +16,26 @@
 # #  ocrmypdf -c --clean-final --deskew -l eng+deu --image-dpi 300 ${filename} "${FN}.pdf"
 # done
 
-find 
+#for dir in ./*/
+#do
+#    dir=${dir%*/}
+#    echo ${dir##*/}
+#done
+
+# ALLJPGS=$(find . -type f -name '*.jpg')
+# for fn in ${ALLJPGS};
+# do
+#     echo "${fn}"
+# done
+
+find . -type f -name '*.jpg' | while read path
+do
+    fn=$(basename -- "$path")
+    dn=$(dirname "${path}")
+    FN=${fn%%.*}
+    #OUT="./ocrd/${dn}/${FN}.pdf"
+    NEWDIR="./ocrd/${dn}/"
+    OUT="${NEWDIR}/${FN}.pdf"
+    mkdir -p "${NEWDIR}"
+    img2pdf --pagesize A4 "${path}" | ocrmypdf --clean-final --deskew -l eng+deu - "${OUT}"
+done
