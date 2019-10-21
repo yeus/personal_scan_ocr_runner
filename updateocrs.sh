@@ -1,3 +1,4 @@
+#!/bin/sh
 #!/bin/sh -x
 #convert input.png -trim output.png
 #find ./ -name "pattern" -exec convert {} -trim outputfolder/{} \;
@@ -31,6 +32,8 @@
 #search for multiple fil extensions:
 #find . -type f \( -name "*.shtml" -or -name "*.css" \)
 
+#user parallel
+
 find . -type f -name '*.pdf' -not -path "*/ocrd/*" | while read path
 do
     fn=$(basename -- "$path")
@@ -40,15 +43,16 @@ do
     NEWDIR="./ocrd/${dn}/"
     OUT="${NEWDIR}/${FN}.pdf"
     mkdir -p "${NEWDIR}"
+    echo "Filename: ${path}"
     if [ ! -f "${OUT}" ]; then
-        echo "File not found!"
+        echo "File not found! starting ocr process!"
         ocrmypdf --clean-final --deskew -l eng+deu "${path}" "${OUT}"
     else
         echo "File exists already!"
     fi
 done
 
-find . -type f -name '*.jpg' -not -path "*/ocrd/*" | while read path
+find . -type f -name \( -name "*.jpg" -or -name "*.JPG" -or -name "*.png" -or -name "*.PNG"\) -not -path "*/ocrd/*" | while read path
 do
     fn=$(basename -- "$path")
     dn=$(dirname "${path}")
@@ -57,10 +61,20 @@ do
     NEWDIR="./ocrd/${dn}/"
     OUT="${NEWDIR}/${FN}.pdf"
     mkdir -p "${NEWDIR}"
+    echo "Filename: ${path}"
     if [ ! -f "${OUT}" ]; then
-        echo "File not found!"
+        echo "File not found! starting ocr process!"
         img2pdf --pagesize A4 "${path}" | ocrmypdf --clean-final --deskew -l eng+deu - "${OUT}"
     else
         echo "File exists already!"
     fi
 done
+
+
+N=4
+(
+for thing in a b c d e f g; do 
+   ((i=i%N)); ((i++==0)) && wait
+   task "$thing" & 
+done
+)
