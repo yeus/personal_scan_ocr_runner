@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #!/bin/sh -x
 #convert input.png -trim output.png
 #find ./ -name "pattern" -exec convert {} -trim outputfolder/{} \;
@@ -34,47 +34,75 @@
 
 #user parallel
 
+task(){
+    fn=$(basename -- "$1")
+    dn=$(dirname "$1")
+    FN=${fn%%.*}
+    #OUT="./ocrd/${dn}/${FN}.pdf"
+    NEWDIR="./ocrd/${dn}/"
+    OUT="${NEWDIR}/${FN}.pdf"
+    mkdir -p "${NEWDIR}"
+    echo "Filename: $1"
+    if [ ! -f "${OUT}" ]; then
+        echo "File not found! starting ocr process!"
+        ocrmypdf --clean-final --deskew -l eng+deu "$1" "${OUT}"
+    else
+        echo "File exists already!"
+    fi
+}
+
+THREADS=16
+(
 find . -type f -name '*.pdf' -not -path "*/ocrd/*" | while read path
 do
-    fn=$(basename -- "$path")
-    dn=$(dirname "${path}")
+    # Every THREADSth job, stop and wait for everything
+    # to complete.
+    if (( i % THREADS == 0 )); then
+        wait
+    fi
+    (( i++ ))
+    echo $i
+    task "$path" &
+done
+)
+
+# N=4
+# (   
+# for thing in a b c d e f g; do 
+#    ((i=i%N)); ((i++==0)) && wait
+#    task "$thing" & 
+# done
+# )
+
+task2(){
+    fn=$(basename -- "$1")
+    dn=$(dirname "$1")
     FN=${fn%%.*}
     #OUT="./ocrd/${dn}/${FN}.pdf"
     NEWDIR="./ocrd/${dn}/"
     OUT="${NEWDIR}/${FN}.pdf"
     mkdir -p "${NEWDIR}"
-    echo "Filename: ${path}"
+    echo "Filename: $1"
     if [ ! -f "${OUT}" ]; then
         echo "File not found! starting ocr process!"
-        ocrmypdf --clean-final --deskew -l eng+deu "${path}" "${OUT}"
+        img2pdf --pagesize A4 "$1" | ocrmypdf --clean-final --deskew -l eng+deu - "${OUT}"
     else
         echo "File exists already!"
     fi
-done
+}
 
-find . -type f -name \( -name "*.jpg" -or -name "*.JPG" -or -name "*.png" -or -name "*.PNG"\) -not -path "*/ocrd/*" | while read path
-do
-    fn=$(basename -- "$path")
-    dn=$(dirname "${path}")
-    FN=${fn%%.*}
-    #OUT="./ocrd/${dn}/${FN}.pdf"
-    NEWDIR="./ocrd/${dn}/"
-    OUT="${NEWDIR}/${FN}.pdf"
-    mkdir -p "${NEWDIR}"
-    echo "Filename: ${path}"
-    if [ ! -f "${OUT}" ]; then
-        echo "File not found! starting ocr process!"
-        img2pdf --pagesize A4 "${path}" | ocrmypdf --clean-final --deskew -l eng+deu - "${OUT}"
-    else
-        echo "File exists already!"
-    fi
-done
-
-
-N=4
+#find . -type f -name \( -name "*.jpg" -or -name "*.JPG" -or -name "*.png" -or -name "*.PNG"\) -not -path "*/ocrd/*" | while read
+THREADS=16
 (
-for thing in a b c d e f g; do 
-   ((i=i%N)); ((i++==0)) && wait
-   task "$thing" & 
+find . -type f \( -name "*.jpg" -or -name "*.JPG" -or -name "*.png" -or -name "*.PNG" \) -not -path "*/ocrd/*" | while read path
+do
+    # Every THREADSth job, stop and wait for everything
+    # to complete.
+    if (( i % THREADS == 0 )); then
+        wait
+    fi
+    (( i++ ))
+    echo $i
+    task2 "$path" &
 done
 )
