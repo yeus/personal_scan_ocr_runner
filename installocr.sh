@@ -7,4 +7,5 @@ sudo apt install tesseract-ocr gimagereader yagf lios aspell-de hunspell-de-de t
 
 sudo apt install pdfsandwich  #in case 
 sudo apt install -y img2pdf ocrmypdf  #preferred solution right now 
+pip3 install --user pymupdf
 
