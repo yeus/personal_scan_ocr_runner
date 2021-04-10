@@ -4,6 +4,8 @@ This script was developed to help organizing a directory of pdf/image scans into
 
 ## Features
 
+This script is at the moment based on [OCRmyPDF](https://github.com/jbarlow83/OCRmyPDF) and [img2pdf](https://gitlab.mister-muffin.de/josch/img2pdf).
+
 - Create a mirrored directory with the same structure as the original.
 - All jpgs, pngs and pdfs are converted into reasonable sized black-white pdfs with OCR applied (we are using img2pdf and ocrmypdf).
 - When updating, avoid rerunning OCR on pdfs/images that were already converted into readable text.
