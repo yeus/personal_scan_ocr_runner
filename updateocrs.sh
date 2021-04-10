@@ -32,7 +32,15 @@
 #search for multiple fil extensions:
 #find . -type f \( -name "*.shtml" -or -name "*.css" \)
 
-#user parallel
+# user parallel processing example:
+# N=4
+# (   
+# for thing in a b c d e f g; do 
+#    ((i=i%N)); ((i++==0)) && wait
+#    task "$thing" & 
+# done
+# )
+
 
 # convert pics into pdfs
 task2(){
@@ -46,16 +54,19 @@ task2(){
     echo "Filename: $1"
     if [ ! -f "${OUT}" ]; then
         echo "File not found! starting ocr process!"
-        img2pdf --pagesize A4 "$1" | ocrmypdf --clean-final --deskew -l eng+deu - "${OUT}"
+        # a lot f jpgs and pngs have wrong exif data for Orientation. we correct that before feeding it into img2pdf
+        exiftool -n -Orientation=1 "$1" -o - |
+        img2pdf --pagesize A4 |
+        ocrmypdf --clean-final --deskew -l eng+deu - "${OUT}"
     else
         echo "File exists already!"
     fi
 }
 
 #find . -type f -name \( -name "*.jpg" -or -name "*.JPG" -or -name "*.png" -or -name "*.PNG"\) -not -path "*/ocrd/*" | while read
-THREADS=16
+THREADS=3
 (
-find . -type f \( -name "*.jpg"  -or -name "*.jpeg" -or -name "*.JPG" -or -name "*.png" -or -name "*.PNG"\) -not -path "*/ocrd/*" | while read path
+find . -type f \( -name "*.jpg"  -or -name "*.jpeg" -or -name "*.JPG" -or -name "*.png" -or -name "*.PNG" \) -not -path "*/ocrd/*" | while read path
 do
     # Every THREADSth job, stop and wait for everything
     # to complete.
@@ -86,7 +97,7 @@ task(){
     fi
 }
 
-THREADS=16
+THREADS=3
 (
 find . -type f -name '*.pdf' -not -path "*/ocrd/*" | while read path
 do
@@ -100,11 +111,3 @@ do
     task "$path" &
 done
 )
-
-# N=4
-# (   
-# for thing in a b c d e f g; do 
-#    ((i=i%N)); ((i++==0)) && wait
-#    task "$thing" & 
-# done
-# )
