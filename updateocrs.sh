@@ -34,6 +34,41 @@
 
 #user parallel
 
+# convert pics into pdfs
+task2(){
+    fn=$(basename -- "$1")
+    dn=$(dirname "$1")
+    FN=${fn%%.*}
+    #OUT="./ocrd/${dn}/${FN}.pdf"
+    NEWDIR="./ocrd/${dn}/"
+    OUT="${NEWDIR}/${FN}.pdf"
+    mkdir -p "${NEWDIR}"
+    echo "Filename: $1"
+    if [ ! -f "${OUT}" ]; then
+        echo "File not found! starting ocr process!"
+        img2pdf --pagesize A4 "$1" | ocrmypdf --clean-final --deskew -l eng+deu - "${OUT}"
+    else
+        echo "File exists already!"
+    fi
+}
+
+#find . -type f -name \( -name "*.jpg" -or -name "*.JPG" -or -name "*.png" -or -name "*.PNG"\) -not -path "*/ocrd/*" | while read
+THREADS=16
+(
+find . -type f \( -name "*.jpg"  -or -name "*.jpeg" -or -name "*.JPG" -or -name "*.png" -or -name "*.PNG"\) -not -path "*/ocrd/*" | while read path
+do
+    # Every THREADSth job, stop and wait for everything
+    # to complete.
+    if (( i % THREADS == 0 )); then
+        wait
+    fi
+    (( i++ ))
+    echo $i
+    task2 "$path" &
+done
+)
+
+
 task(){
     fn=$(basename -- "$1")
     dn=$(dirname "$1")
@@ -73,36 +108,3 @@ done
 #    task "$thing" & 
 # done
 # )
-
-task2(){
-    fn=$(basename -- "$1")
-    dn=$(dirname "$1")
-    FN=${fn%%.*}
-    #OUT="./ocrd/${dn}/${FN}.pdf"
-    NEWDIR="./ocrd/${dn}/"
-    OUT="${NEWDIR}/${FN}.pdf"
-    mkdir -p "${NEWDIR}"
-    echo "Filename: $1"
-    if [ ! -f "${OUT}" ]; then
-        echo "File not found! starting ocr process!"
-        img2pdf --pagesize A4 "$1" | ocrmypdf --clean-final --deskew -l eng+deu - "${OUT}"
-    else
-        echo "File exists already!"
-    fi
-}
-
-#find . -type f -name \( -name "*.jpg" -or -name "*.JPG" -or -name "*.png" -or -name "*.PNG"\) -not -path "*/ocrd/*" | while read
-THREADS=16
-(
-find . -type f \( -name "*.jpg" -or -name "*.JPG" -or -name "*.png" -or -name "*.PNG" \) -not -path "*/ocrd/*" | while read path
-do
-    # Every THREADSth job, stop and wait for everything
-    # to complete.
-    if (( i % THREADS == 0 )); then
-        wait
-    fi
-    (( i++ ))
-    echo $i
-    task2 "$path" &
-done
-)
