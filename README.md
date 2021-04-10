@@ -9,6 +9,11 @@ This script was developed to help organizing a directory of pdf/image scans into
 - When updating, avoid rerunning OCR on pdfs/images that were already converted into readable text.
 - The script does not touch or alter the original files/directories in any way.
 
+## Installation:
+
+- run the install script
+- change the install script in order to support more languages (default: german)
+
 ## Introduction
 
 ### The Scenario
@@ -46,7 +51,3 @@ Together with a file indexer such as *baloo* this makes it very easy to find old
 ## Tested with:
 
 - ubuntu 20.04
-
-## Installation:
-
-- run the install script
