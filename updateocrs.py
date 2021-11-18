@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 
-import os
-from pathlib import Path
+import concurrent.futures
 import subprocess
-import logging
+from pathlib import Path
 
 directory = "."
-#all_files = [Path(os.path.join(path, name)) for path, subdirs, files in os.walk(directory) for name in files]
+# all_files = [Path(os.path.join(path, name)) for path, subdirs, files in os.walk(directory) for name in files]
 all_files = [f for f in Path('.').rglob('*') if f.is_file()]
-
 
 # exclude ocrd path
 scan_files = {f for f in all_files if not f.parts[0].startswith('ocrd')}
@@ -29,17 +27,27 @@ info = dict(
 )
 print(f"{info}")
 
-def ocr_file(f: Path):
-    print(f"ocr#{i}: {f}")
+
+def ocr_path(f: Path):
     new_path = './ocrd' / f.parent
-    new_file = new_path / (f.name + '.ocr.pdf')
-    new_link = new_path / f.name
     new_path.mkdir(parents=True, exist_ok=True)
+    return new_path
+
+
+def symlink_file(f: Path):
+    new_path = ocr_path(f)
+    new_link = new_path / f.name
     # create a symlink to original file
     try:
         new_link.symlink_to(f.resolve())
     except:
         print("symlink exists already")
+
+
+def ocr_file(f: Path):
+    print(f"ocr#: {f}")
+    new_path = ocr_path(f)
+    new_file = new_path / (f.name + '.ocr.pdf')
     # try to ocr the file and save it in the respective directory with an additional
     # suffic
     result = subprocess.run([
@@ -47,12 +55,26 @@ def ocr_file(f: Path):
         str(f.absolute()), str(new_file.absolute())])
 
     print(f"return code: {result}")
+    return result
+
 
 # current numberof files
 # add suffix
-for i, f in enumerate(new_files):
-    ocr_file(f)
-    if i > 10: break
+# for i, f in enumerate(new_files):
+#    ocr_file(f)
+#    if i > 10: break
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    future_to_file = {executor.submit(ocr_file, f): f for i, f in enumerate(new_files)}
+    for future in concurrent.futures.as_completed(future_to_file):
+        url = future_to_file[future]
+        try:
+            data = future.result()
+            print(f"returned data: {data}")
+        except Exception as exc:
+            print('%r generated an exception: %s' % (url, exc))
+        else:
+            print('%r page is %d bytes' % (url, len(data)))
 
 # TODO: add parallel processing with asyncio subprocesses
 # https://docs.python.org/3/library/asyncio-subprocess.html
