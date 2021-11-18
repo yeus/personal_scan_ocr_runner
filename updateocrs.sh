@@ -64,7 +64,7 @@ task2(){
 }
 
 #find . -type f -name \( -name "*.jpg" -or -name "*.JPG" -or -name "*.png" -or -name "*.PNG"\) -not -path "*/ocrd/*" | while read
-THREADS=3
+THREADS=16
 (
 find . -type f \( -name "*.jpg"  -or -name "*.jpeg" -or -name "*.JPG" -or -name "*.png" -or -name "*.PNG" \) -not -path "*/ocrd/*" | while read path
 do
@@ -97,7 +97,7 @@ task(){
     fi
 }
 
-THREADS=3
+THREADS=16
 (
 find . -type f -name '*.pdf' -not -path "*/ocrd/*" | while read path
 do
