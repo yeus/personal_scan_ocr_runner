@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import concurrent.futures
+import os
 import subprocess
 from pathlib import Path
 
@@ -10,11 +11,12 @@ all_files = [f for f in Path('.').rglob('*') if f.is_file()]
 
 # exclude ocrd path
 scan_files = {f for f in all_files if not f.parts[0].startswith('ocrd')}
-scan_files = {f for f in scan_files if f.suffix in ['.jpg']}
+scan_files = {f for f in scan_files if f.suffix.lower() in ['.jpg', '.jpeg', '.png', '.pdf']}
 
 # remove ocrd parent dir from these files
 ocrd_files = {f for f in all_files if f.parts[0].startswith('ocrd')}
-ocrd_cmpr = {Path(*f.parts[1:]).with_suffix('') for f in ocrd_files}
+ocrd_cmpr = {Path(*f.parts[1:]).with_suffix('').with_suffix('') for f in ocrd_files}
+#ocrd_cmpr = {f.parent / f.stems for f in ocrd_files}
 #
 
 # get files that weren't ocrd'd yet:
@@ -34,6 +36,16 @@ def ocr_path(f: Path):
     return new_path
 
 
+def remove_empty_dirs(root):
+    folders = list(os.walk(root))[1:]
+
+    for folder, files, subfolders in folders:
+        # folder example: ('FOLDER/3', [], ['file'])
+        # if no files and folders
+        if not files and not subfolders:
+            os.rmdir(folder)
+
+
 def symlink_file(f: Path):
     new_path = ocr_path(f)
     new_link = new_path / f.name
@@ -50,11 +62,28 @@ def ocr_file(f: Path):
     new_file = new_path / (f.name + '.ocr.pdf')
     # try to ocr the file and save it in the respective directory with an additional
     # suffic
-    result = subprocess.run([
-        "ocrmypdf", "--clean-final", "--deskew", "-l", "eng+deu",
-        str(f.absolute()), str(new_file.absolute())])
+    # TODO: do the preprocessing only for images
+    if f.suffix != '.pdf':
+        cmd = (
+            f'exiftool -n -Orientation=1 "{str(f.absolute())}" -o - | '
+            'img2pdf --pagesize A4 | '
+            f'ocrmypdf --clean-final --deskew --rotate-pages -l eng+deu - "{str(new_file.absolute())}"'
+        )
+        print(f"command: {cmd}")
+        result = subprocess.run(cmd, shell=True)
+    else:
+        result = "is-pdf!!"
 
-    print(f"return code: {result}")
+    """result = subprocess.run([
+        "ocrmypdf", "--clean-final",
+        "--rotate-pages",
+        "--jobs", "5",
+        "--optimize", "2",
+        "--deskew",
+        "-l", "eng+deu",
+        str(f.absolute()), str(new_file.absolute())])"""
+
+    #print(f"return code: {result}")
     return result
 
 
@@ -64,17 +93,27 @@ def ocr_file(f: Path):
 #    ocr_file(f)
 #    if i > 10: break
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-    future_to_file = {executor.submit(ocr_file, f): f for i, f in enumerate(new_files)}
-    for future in concurrent.futures.as_completed(future_to_file):
-        url = future_to_file[future]
-        try:
-            data = future.result()
-            print(f"returned data: {data}")
-        except Exception as exc:
-            print('%r generated an exception: %s' % (url, exc))
-        else:
-            print('%r page is %d bytes' % (url, len(data)))
+if False:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
+        future_to_file = {executor.submit(ocr_file, f): f for i, f in enumerate(new_files)}
+        for future in concurrent.futures.as_completed(future_to_file):
+            url = future_to_file[future]
+            try:
+                data = future.result()
+                print(f"returned data: {data}")
+            except Exception as exc:
+                print('%r generated an exception: %s' % (url, exc))
+            else:
+                print('%r page is %d bytes' % (url, len(data)))
+
+if False:
+    for i in range(10):
+        # remove subfolder up to 10 levels deep
+        remove_empty_dirs("./ocrd")
+
+if False:
+    # add symlinks
+    (symlink_file(f) for i, f in enumerate(new_files))
 
 # TODO: add parallel processing with asyncio subprocesses
 # https://docs.python.org/3/library/asyncio-subprocess.html
