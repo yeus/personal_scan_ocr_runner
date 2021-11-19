@@ -26,6 +26,8 @@ def remove_empty_dirs(root):
 
 
 def symlink_file(f: Path):
+    #TODO: make symlinks relativ, so that they also work on
+    #       other computers...
     new_path = ocr_path(f)
     new_link = new_path / f.name
     # create a symlink to original file
