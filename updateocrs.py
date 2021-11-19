@@ -5,29 +5,7 @@ import os
 import subprocess
 from pathlib import Path
 
-directory = "."
-# all_files = [Path(os.path.join(path, name)) for path, subdirs, files in os.walk(directory) for name in files]
-all_files = [f for f in Path('.').rglob('*') if f.is_file()]
-
-# exclude ocrd path
-scan_files = {f for f in all_files if not f.parts[0].startswith('ocrd')}
-scan_files = {f for f in scan_files if f.suffix.lower() in ['.jpg', '.jpeg', '.png', '.pdf']}
-
-# remove ocrd parent dir from these files
-ocrd_files = {f for f in all_files if f.parts[0].startswith('ocrd')}
-ocrd_cmpr = {Path(*f.parts[1:]).with_suffix('').with_suffix('') for f in ocrd_files}
-#ocrd_cmpr = {f.parent / f.stems for f in ocrd_files}
-#
-
-# get files that weren't ocrd'd yet:
-new_files = scan_files.difference(ocrd_cmpr)
-info = dict(
-    all_files_len=len(all_files),
-    scan_files_len=len(scan_files),
-    ocrd_files_len=len(ocrd_files),
-    new_files_len=len(new_files)
-)
-print(f"{info}")
+import typer
 
 
 def ocr_path(f: Path):
@@ -43,6 +21,7 @@ def remove_empty_dirs(root):
         # folder example: ('FOLDER/3', [], ['file'])
         # if no files and folders
         if not files and not subfolders:
+            print(f"remove {folder}")
             os.rmdir(folder)
 
 
@@ -83,37 +62,68 @@ def ocr_file(f: Path):
         "-l", "eng+deu",
         str(f.absolute()), str(new_file.absolute())])"""
 
-    #print(f"return code: {result}")
+    # print(f"return code: {result}")
     return result
 
 
-# current numberof files
-# add suffix
-# for i, f in enumerate(new_files):
-#    ocr_file(f)
-#    if i > 10: break
+def main(
+        ocr: bool = False,
+        remove_empty_directories: bool = False,
+        symlinks: bool = False,
+        show_info: bool = True,
+        job_num: int=5,
+):
+    directory = Path(".")
+    # all_files = [Path(os.path.join(path, name)) for path, subdirs, files in os.walk(directory) for name in files]
+    all_files = [f for f in Path(directory).rglob('*') if f.is_file()]
 
-if False:
-    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
-        future_to_file = {executor.submit(ocr_file, f): f for i, f in enumerate(new_files)}
-        for future in concurrent.futures.as_completed(future_to_file):
-            url = future_to_file[future]
-            try:
-                data = future.result()
-                print(f"returned data: {data}")
-            except Exception as exc:
-                print('%r generated an exception: %s' % (url, exc))
-            else:
-                print('%r page is %d bytes' % (url, len(data)))
+    # exclude ocrd path
+    scan_files = {f for f in all_files if not f.parts[0].startswith('ocrd')}
+    scan_files = {f for f in scan_files if f.suffix.lower() in ['.jpg', '.jpeg', '.png', '.pdf']}
 
-if False:
-    for i in range(10):
-        # remove subfolder up to 10 levels deep
-        remove_empty_dirs("./ocrd")
+    # remove ocrd parent dir from these files
+    ocrd_files = {f for f in all_files if f.parts[0].startswith('ocrd')}
+    ocrd_cmpr = {Path(*f.parts[1:]).with_suffix('').with_suffix('') for f in ocrd_files}
+    # ocrd_cmpr = {f.parent / f.stems for f in ocrd_files}
+    #
 
-if False:
-    # add symlinks
-    (symlink_file(f) for i, f in enumerate(new_files))
+    # get files that weren't ocrd'd yet:
+    new_files = scan_files.difference(ocrd_cmpr)
+    if show_info:
+        info = dict(
+            all_files_len=len(all_files),
+            scan_files_len=len(scan_files),
+            ocrd_files_len=len(ocrd_files),
+            new_files_len=len(new_files)
+        )
+        print(f"{info}")
+
+    if ocr:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=job_num) as executor:
+            future_to_file = {executor.submit(ocr_file, f): f for i, f in enumerate(new_files)}
+            for future in concurrent.futures.as_completed(future_to_file):
+                url = future_to_file[future]
+                try:
+                    data = future.result()
+                    print(f"returned data: {data}")
+                except Exception as exc:
+                    print('%r generated an exception: %s' % (url, exc))
+                else:
+                    print('%r page is %d bytes' % (url, len(data)))
+
+    if remove_empty_directories:
+        for i in range(10):
+            # remove subfolder up to 10 levels deep
+            remove_empty_dirs(directory / "ocrd")
+
+    if symlinks:
+        # add symlinks
+        for i, f in enumerate(new_files):
+            symlink_file(f)
+
+
+if __name__ == "__main__":
+    typer.run(main)
 
 # TODO: add parallel processing with asyncio subprocesses
 # https://docs.python.org/3/library/asyncio-subprocess.html
