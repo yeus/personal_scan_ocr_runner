@@ -42,7 +42,7 @@ def ocr_file(f: Path):
     # try to ocr the file and save it in the respective directory with an additional
     # suffic
     # TODO: do the preprocessing only for images
-    if f.suffix != '.pdf':
+    if f.suffix.lower() != '.pdf':
         cmd = (
             f'exiftool -n -Orientation=1 "{str(f.absolute())}" -o - | '
             'img2pdf --pagesize A4 | '
@@ -51,7 +51,13 @@ def ocr_file(f: Path):
         print(f"command: {cmd}")
         result = subprocess.run(cmd, shell=True)
     else:
-        result = "is-pdf!!"
+        cmd = (
+            f'ocrmypdf --clean-final --deskew --rotate-pages"'
+            f'--optimize 2 -l eng+deu '
+            f'"{str(f.absolute())}" "{str(new_file.absolute())}"'
+        )
+        print(f"command: {cmd}")
+        result = subprocess.run(cmd, shell=True)
 
     """result = subprocess.run([
         "ocrmypdf", "--clean-final",
@@ -102,14 +108,12 @@ def main(
         with concurrent.futures.ThreadPoolExecutor(max_workers=job_num) as executor:
             future_to_file = {executor.submit(ocr_file, f): f for i, f in enumerate(new_files)}
             for future in concurrent.futures.as_completed(future_to_file):
-                url = future_to_file[future]
+                file = future_to_file[future]
                 try:
                     data = future.result()
                     print(f"returned data: {data}")
                 except Exception as exc:
-                    print('%r generated an exception: %s' % (url, exc))
-                else:
-                    print('%r page is %d bytes' % (url, len(data)))
+                    print(f'{file} generated an exception: {exc}')
 
     if remove_empty_directories:
         for i in range(10):
@@ -118,7 +122,7 @@ def main(
 
     if symlinks:
         # add symlinks
-        for i, f in enumerate(new_files):
+        for i, f in enumerate(all_files):
             symlink_file(f)
 
 
