@@ -1,6 +1,25 @@
 # PSOR personal_scan_ocr_runner
 
-This script was developed to help organizing a directory of pdf/image scans into readable PDFs by applying OCR on them.
+This python script was developed to help organizing a directory of pdf/image scans into readable PDFs by applying OCR on them.
+
+## Usage
+
+```
+Usage: updateocrs.py [OPTIONS]
+
+Options:
+  --ocr / --no-ocr                [default: False]
+  --remove-empty-directories / --no-remove-empty-directories
+                                  [default: False]
+  --symlinks / --no-symlinks      [default: False]
+  --show-info / --no-show-info    [default: True]
+  --job-num INTEGER               [default: 5]
+  --install-completion            Install completion for the current shell.
+  --show-completion               Show completion for the current shell, to
+                                  copy it or customize the installation.
+
+  --help                          Show this message and exit.
+```
 
 ## Features
 
